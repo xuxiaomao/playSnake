@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+
+    <style>
+        #map {
+            width: 800px;
+            height: 600px;
+            background: #cccccc;
+            position: relative;
+            top: 0px;
+            left: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="./line.js"></script>
+
+    <script>
+        /*
+        1.分析需求(交互)：
+            键盘按下上下左右： （1）蛇移动  (2)边界检测  （3）吃食物  (4)刷新食物
+        
+        2.思路分析
+            1.获取元素
+                //1.1 地图
+                //1.2 食物
+                    x : 水平位置
+                    y:垂直位置
+                    bgc:颜色  （随机颜色）
+                    width:宽度
+                    height:高度
+                //1.3 蛇
+                    body: 身体数组  body: [{x:3,y:1,bgc:red},{x:2,y:1,bgc},{x:1,y:1,bgc}]
+                    width: 每一节宽度
+                    height: 每一节高度
+                    direction : 蛇移动方向  （默认右：right）
+            2.注册事件
+                键盘按下： widow.onkeydown
+                获取按键： e.keyCode
+            3.事件处理
+                （1）蛇移动  
+                (2)边界检测  
+                （3）吃食物  
+                (4)刷新食物
+        */
+
+        //1.获取元素
+
+        //1.1  地图
+        var map = document.getElementById('map');
+        console.log(map);
+
+        //1.2 食物
+
+        //声明构造函数创建食物对象
+        function Food(x, y, bgc, width, height) {
+            this.x = x || 0;//如果用户没有传参，默认值就是0（随机位置）
+            this.y = y || 0;
+            this.bgc = bgc || getRandomColor();
+            this.width = width || 20;
+            this.height = height || 20;
+        };
+
+        //每一个食物都可以渲染到页面，所以这个方法写到原型中
+        Food.prototype.render = function (map) {
+            //this : 谁调用这个方法，this就指向谁
+            //this指向调用这个方法的每一个食物对象
+            //1.创建空元素
+            var div1 = document.createElement('div');
+            //2.设置属性
+            div1.style.position = 'absolute';
+            //如果this.x是0，就生成随机位置
+            /* 
+            页面格子数量 ：var num =  map.offsetWidth / this.width   (800/20 = 40)
+            随机位置 ：var x =  0-num之间的随机整数   (5:第五个格子)
+            left值：  x * this.width
+            */
+            var x = Math.floor(Math.random() * (map.offsetWidth / this.width));//随机格子数
+            var y = Math.floor(Math.random() * (map.offsetHeight / this.height));//随机格子数
+            div1.style.left = (this.x || x * this.width) + 'px';
+            div1.style.top = (this.y || y * this.height) + 'px';
+
+            div1.style.width = this.width + 'px';
+            div1.style.height = this.height + 'px';
+            div1.style.backgroundColor = this.bgc;
+
+            this.ele = div1;//存储页面的div1，用于移除
+            //3.添加到页面
+            map.appendChild(div1);
+        };
+
+        var food = new Food();//创建食物
+        food.render(map);//添加到页面
+        console.log(food);
+
+        /*思考题：如何刷新食物 
+        （1）旧食物移除
+        （2）重新生成食物然后添加到页面
+        */
+        // //（1）移除旧食物
+        // food.ele.parentNode.removeChild(food.ele);
+        // //(2)重新生成新的食物
+        // var food = new Food();
+        // food.render(map);
+
+        //1.3 创建蛇对象
+        function Snake(width, height, direction) {
+            this.width = width || 20;
+            this.height = height || 20;
+            this.direction = direction || 'right';
+            //蛇的身体：body数组 存储是每一节的数据
+            this.body = [
+                {
+                    x: 3,
+                    y: 2,
+                    bgc: 'red'
+                },
+                {
+                    x: 2,
+                    y: 2,
+                    bgc: getRandomColor()
+                },
+                {
+                    x: 1,
+                    y: 2,
+                    bgc: getRandomColor()
+                }
+            ];
+        };
+        //（1） 蛇显示：每一条蛇都有显示到页面的功能，应该添加到原型中
+        Snake.prototype.render = function (map) {
+            //this:指向调用这个函数的蛇对象
+            this.snakeElements = [];//声明数组存储身体div(用于刷新位置)
+            for (var i = 0; i < this.body.length; i++) {
+                //每一节身体的数据
+                var section = this.body[i];
+                //(1)创建元素
+                var div2 = document.createElement('div');
+                //（2）设置属性
+                div2.style.position = 'absolute';
+                div2.style.left = section.x * this.width + 'px';
+                div2.style.top = section.y * this.height + 'px';
+                div2.style.width = this.width + 'px';
+                div2.style.height = this.height + 'px';
+                div2.style.backgroundColor = section.bgc;
+                this.snakeElements.push(div2);
+                //(3)添加到页面
+                map.appendChild(div2);
+            };
+        };
+
+        var snake = new Snake();//创建蛇对象
+        snake.render(map);
+        console.log(snake);
+
+        //（2）蛇移动
+        Snake.prototype.move = function () {
+            //this:调用这个方法的蛇对象
+
+            //(1)倒着遍历蛇的身体，让每一节身体位置与前一节一致（蛇头除外）
+            for (var i = this.body.length - 1; i > 0; i--) {//细节：这里i>0,而不是i>=0,蛇头不是跟前一节位置一致
+                this.body[i].x = this.body[i - 1].x;
+                this.body[i].y = this.body[i - 1].y;
+            };
+            //（2）蛇头位置取决于移动方向
+            switch (this.direction) {
+                case 'left':
+                    this.body[0].x--;
+                    break;
+                case 'top':
+                    this.body[0].y--;
+                    break;
+                case 'right':
+                    this.body[0].x++
+                    break;
+                case 'bottom':
+                    this.body[0].y++;
+                    break;
+            };
+
+            console.log(this.body);
+            
+            //(3)刷新蛇
+            //先移除旧蛇
+            this.remove();
+            //重新显示新蛇
+            this.render(map);
+        };
+
+        //(3)蛇移除：remove
+        Snake.prototype.remove = function(){
+            //this:调用这个方法的蛇对象
+            for(var i = 0;i<this.snakeElements.length;i++){
+                this.snakeElements[i].parentNode.removeChild(this.snakeElements[i]);
+            };
+        };
+
+        //(4)蛇吃食物：eat
+        /**
+         * @description: 
+         * @param {type} food:吃到的食物 
+         * @param {type} map:显示到那个元素
+         * @return: 
+         */
+        Snake.prototype.eat = function(food,map){
+            //this:调用eat方法的蛇对象
+
+            //(1)纪录蛇当前尾巴的位置
+            var wx = this.body[this.body.length-1].x;
+            var wy = this.body[this.body.length-1].y;
+            //(2）将食物添加到body的后面
+            this.body.push({
+                x:wx,
+                y:wy,
+                bgc:food.bgc
+            });
+            //(3)刷新蛇的位置
+            //先移除旧蛇
+            this.remove();
+            //重新显示新蛇
+            this.render(map);
+
+        };
+
+        //2.注册事件： window.onkeydown
+        window.onkeydown = function (e) {
+            var code = e.keyCode;
+            console.log(code);
+
+            switch (code) {/* 细节：蛇不能倒着走 */
+                case 37://左
+                    //除外right方向之外蛇才可以往左移动
+                    if(snake.direction != 'right'){
+                        snake.direction = 'left';
+                    };
+                    
+                    break;
+                case 38://上
+                    if(snake.direction != 'bottom'){
+                        snake.direction = 'top';
+                    };
+                    
+                    break;
+                case 39://右
+                    if(snake.direction != 'left'){
+                        snake.direction = 'right';
+                    };
+                    break;
+                case 40: //下
+                    if(snake.direction != 'top'){
+                        snake.direction = 'bottom';
+                    };
+                    break;
+                default:
+                    return;//如果是其他按键，不做处理
+                    break;
+            };
+
+            //(1)蛇移动
+            snake.move();
+            //(2)边界检测
+            if(snake.body[0].x < 0 || snake.body[0].x >= map.offsetWidth/snake.width){
+                alert('Game Over');
+                location.reload();//刷新页面
+            };
+
+            if(snake.body[0].y < 0 || snake.body[0].y >= map.offsetHeight/snake.height){
+                alert('Game Over');
+                location.reload();//刷新页面
+            };
+            //(3)吃食物
+            //如果蛇头位置与食物位置一致，就表示吃到食物
+            if(snake.body[0].x == food.ele.offsetLeft/food.width && snake.body[0].y == food.ele.offsetTop/food.height){
+                console.log('好开心啊，有东西吃啦');
+                snake.eat(food,map);
+                //(4)刷新食物:蛇只有吃到食物才需要刷新
+                food.ele.parentNode.removeChild(food.ele);
+                //重新创建食物并显示到页面
+                food = new Food();
+                food.render(map);
+            };
+        };
+
+        getRandomColor();
+
+        /**
+         * @description: 生成16进制随机颜色
+         * @param {type} 
+         * @return: 
+         */
+        function getRandomColor() {
+            //(1)将0-f十六个字符存入数组中
+            var arr = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+            //(2)声明变量存储十六进制颜色
+            var str = '#';
+            //(3)生成随机字符 6次
+            for (var i = 1; i <= 6; i++) {
+                //生成随机下标（[0-15]），获取字符
+                var index = Math.floor(Math.random() * 16);
+                str += arr[index];
+            };
+            return str;
+        };
+    </script>
+</body>
+
+</html>

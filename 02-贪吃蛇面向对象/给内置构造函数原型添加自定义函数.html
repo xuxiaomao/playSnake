@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    
+    <script>
+        //给内置构造函数添加自定义方法
+
+        //需求：数组最大值  （默认Array.prototype没有这个方法）
+
+        //程序员A
+        // var arr = [100,20,88,66,70];
+
+        // Array.prototype.max = function(){
+        //     var max = -Infinity;
+        //     for(var i = 0;i<this.length;i++){
+        //         if(this[i] >= max){
+        //             max = this[i];
+        //         };
+        //     };
+        //     return max;
+        // };
+
+        // console.log(arr.max());
+
+        // var arr1 = [99,200,66,77];
+        // console.log(arr1.max());
+
+        //1.直接给内置构造函数原型添加有一个弊端： 多人开发导致覆盖
+
+        //程序员B： 也要给构造函数添加max方法
+        // Array.prototype.max = function(){
+        //     console.log('11111');
+        // };
+
+        // var arr2 = [99,200,66,77];
+        // console.log(arr2.max());
+
+
+        //2.解决方案：  不要修改内置构造函数，使用自定义数组
+
+        function myArr(){
+            this.max = function(){
+                console.log('11111');
+            }
+        };
+        //将myArr的原型指向空数组
+        /* 
+        这里为什么不直接指向Array.prototype?
+        1.如果   myArr.prototype = Array.prototype;  引用类型拷贝的是地址，以后我修改了myArr.prototype，内置Array.prototype也会改
+        2.指向空数组。由于空数组的原型指向Array.prototype，实例化对象一样可以访问数组的方法
+            而且以后要修改myArr.prototype，相当于是给这个空数组添加方法。对原生的构造函数Array原型没有影响
+
+        */
+        myArr.prototype = [];
+
+        myArr.prototype.min = function(){
+            console.log('1111');
+ 
+        }
+
+        var arr = new myArr();
+        console.log(arr);
+        arr.push(10,20,30,40,50);
+        console.log(arr);
+        
+        
+        
+        
+
+        </script>
+</body>
+</html>
